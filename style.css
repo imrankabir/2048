@@ -1,12 +1,13 @@
 body {
     margin: 0;
     padding: 0;
+    user-select: none;
     text-align: center;
     background: #faf8ef;
     font-family: Arial, sans-serif;
 }
 .game-container {
-    width: 320px;
+    width: 380px;
     margin: 50px auto;
 }
 .score {
@@ -23,8 +24,8 @@ body {
     grid-template-columns: repeat(4, 1fr);
 }
 .tile {
-    width: 70px;
-    height: 70px;
+    width: 80px;
+    height: 80px;
     font-size: 2em;
     color: #776e65;
     font-weight: bold;
@@ -66,6 +67,28 @@ body {
 }
 .tile[data-value='2048'] {
     background: #edc22e; color: #f9f6f2;
+}
+.top-scores {
+    color: #786;
+    display: flex;
+    margin-top: 10px;
+    flex-direction: column;
+    box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
+}
+.top-scores span {
+    padding: 10px;
+    background: #ccc;
+    border-radius: 10px 10px 0 0;
+}
+.top-scores ul {
+    margin: 0;
+    list-style: none;
+    padding: 5px 10px;
+    display: inline-block;
+    border: 1px solid #ccc;
+}
+.top-scores ul li {
+    text-align: left;
 }
 button {
     color: #fff;

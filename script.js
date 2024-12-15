@@ -11,6 +11,15 @@ const get = (k, d) => JSON.parse(localStorage.getItem(`game-2048-${k}`)) ?? d;
 const set = (k, v) => localStorage.setItem(`game-2048-${k}`, JSON.stringify(v));
 
 const start = e => {
+    const { scores } = get('scores', {scores: []});
+    if (scores.length > 0) {
+        document.querySelector('#top-scores').innerHTML = '';
+        for (const score of scores) {
+            const li = document.createElement('li');
+            li.textContent = score.toLocaleString();
+            document.querySelector('#top-scores').appendChild(li);
+        }
+    }
     const { score } = get('score', {score: 0});
     scoreEle.textContent = score;
     if (score == 0) {
@@ -168,6 +177,12 @@ document.addEventListener('keydown', e => {
 });
 
 document.querySelector('#restart-btn').addEventListener('click', e => {
+    let { scores } = get('scores', {scores: []});
+    const { score } = get('score', {score: 0});
+    scores.push(score);
+    scores.sort((a, b) => b - a);
+    scores = scores.slice(0, 5);
+    set('scores', {scores});
     set('score', {score: 0});
     set('grid', {grid: matrix});
     start();
