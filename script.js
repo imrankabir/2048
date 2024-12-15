@@ -136,7 +136,7 @@ const swipe = e => {
         random();
         update();
         const { score } = get('score', {score: 0});
-        scoreEle.textContent = score;
+        scoreEle.textContent = score.toLocaleString();
     }
 };
 
@@ -172,7 +172,7 @@ document.addEventListener('keydown', e => {
         random();
         update();
         const { score } = get('score', {score: 0});
-        scoreEle.textContent = score;
+        scoreEle.textContent = score.toLocaleString();
     }
 });
 
