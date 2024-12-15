@@ -54,7 +54,6 @@ const update = e => {
             container.appendChild(tile);
         }
     }
-    // set('grid', {grid});
 };
 
 const slide = row => {
@@ -107,13 +106,13 @@ const down = e => {
 
 const swipe = e => {
     e.preventDefault();
-    
     const deltaX = touchEndX - touchStartX;
     const deltaY = touchEndY - touchStartY;
 
     const absDeltaX = Math.abs(deltaX);
     const absDeltaY = Math.abs(deltaY);
-
+    
+    const { grid } = get('grid', {grid: matrix});
     const prevGrid = JSON.stringify(grid);
 
     if (absDeltaX > absDeltaY) {
@@ -123,7 +122,34 @@ const swipe = e => {
         if (deltaY > 0) down();
         else up();
     }
+    const { grid: updateGrid } = get('grid', {grid: matrix});
+    if (JSON.stringify(updateGrid) != prevGrid) {
+        random();
+        update();
+        const { score } = get('score', {score: 0});
+        scoreEle.textContent = score;
+    }
 };
+
+// const swipe = e => {
+//     e.preventDefault();
+    
+//     const deltaX = touchEndX - touchStartX;
+//     const deltaY = touchEndY - touchStartY;
+
+//     const absDeltaX = Math.abs(deltaX);
+//     const absDeltaY = Math.abs(deltaY);
+
+//     const prevGrid = JSON.stringify(grid);
+
+//     if (absDeltaX > absDeltaY) {
+//         if (deltaX > 0) right();
+//         else left();
+//     } else {
+//         if (deltaY > 0) down();
+//         else up();
+//     }
+// };
 
 document.addEventListener('keydown', e => {
     const { grid } = get('grid', {grid: matrix});
@@ -150,16 +176,12 @@ document.querySelector('#restart-btn').addEventListener('click', e => {
 container.addEventListener('touchstart', e => {
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
-    // e.preventDefault();
 });
 
 container.addEventListener('touchend', e => {
     touchEndX = e.changedTouches[0].clientX;
     touchEndY = e.changedTouches[0].clientY;
     swipe();
-    // e.preventDefault();
 });
 
-document.addEventListener('DOMContentLoaded', e => {
-    start();
-});
+document.addEventListener('DOMContentLoaded', e => start());
