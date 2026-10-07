@@ -1,22 +1,413 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0">
-    <title>2048 Game</title>
-    <link rel="shortcut icon" type="image/x-icon" href="favicon.png">
-    <link rel="stylesheet" href="style.css?v=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>2048 Classic — Player & Leaderboard</title>
+<style>
+:root{
+  --bg:#faf8ef;--text:#776e65;--muted:#8f7a66;--board:#bbada0;
+  --empty:rgba(238,228,218,.35);--button:#8f7a66;--button-hover:#7d6958;
+  --gap:15px;--radius:6px;--panel:#ffffff;--danger:#a33a2b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
+body{padding:24px 14px 45px}
+button,input{font:inherit}
+button{border:0;cursor:pointer}
+.page{width:min(100%,900px);margin:auto}
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:28px}
+.brand h1{margin:0;font-size:78px;line-height:.86;letter-spacing:-3px;font-weight:800}
+.brand-copy{margin-top:23px;font-size:17px;line-height:1.35}
+.brand-copy strong{display:block;margin-bottom:3px}
+.right-head{display:flex;flex-direction:column;align-items:flex-end;gap:15px}
+.player-strip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.player-name{font-weight:800;color:var(--button);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.link-btn{background:none;color:var(--button);text-decoration:underline;padding:3px 5px;font-weight:700}
+.scores{display:flex;gap:5px}
+.score-box{min-width:76px;height:56px;padding:7px 12px 5px;background:#8f7769;border-radius:3px;color:#fff;text-align:center;text-transform:uppercase;font-weight:700}
+.score-box .label{display:block;font-size:10px;letter-spacing:.5px;opacity:.9;margin-bottom:4px}
+.score-box .value{display:block;font-size:17px;line-height:1}
+.actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.action{background:var(--button);color:#fff;font-weight:700;border-radius:4px;padding:9px 14px}
+.action:hover{background:var(--button-hover)}
+.action.secondary{background:#9b8b80}
+.action:disabled{opacity:.45;cursor:not-allowed}
+.game-wrap{position:relative}
+.board{position:relative;width:100%;max-width:500px;margin:0 auto;padding:var(--gap);background:var(--board);border-radius:var(--radius);display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gap);touch-action:none;user-select:none}
+.cell{aspect-ratio:1;background:var(--empty);border-radius:4px}
+.tile-layer{position:absolute;inset:var(--gap);pointer-events:none}
+.tile{position:absolute;width:calc((100% - 45px)/4);height:calc((100% - 45px)/4);display:flex;align-items:center;justify-content:center;border-radius:4px;font-weight:800;font-size:48px;line-height:1;color:#776e65;transition:transform 100ms ease,left 100ms ease,top 100ms ease;z-index:2;box-shadow:inset 0 0 0 1px rgba(0,0,0,.01)}
+.tile.new{animation:appear 150ms ease}.tile.merged{animation:pop 170ms ease;z-index:4}
+@keyframes appear{0%{transform:scale(0);opacity:0}80%{transform:scale(1.08);opacity:1}100%{transform:scale(1)}}
+@keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.16)}100%{transform:scale(1)}}
+.v2{background:#eee4da}.v4{background:#ede0c8}.v8{background:#f2b179;color:#f9f6f2}
+.v16{background:#f59563;color:#f9f6f2}.v32{background:#f67c5f;color:#f9f6f2}.v64{background:#f65e3b;color:#f9f6f2}
+.v128{background:#edcf72;color:#f9f6f2;font-size:40px}.v256{background:#edcc61;color:#f9f6f2;font-size:40px}
+.v512{background:#edc850;color:#f9f6f2;font-size:40px}.v1024{background:#edc53f;color:#f9f6f2;font-size:32px}
+.v2048{background:#edc22e;color:#f9f6f2;font-size:32px;box-shadow:0 0 25px 5px rgba(237,194,46,.45)}
+.v4096,.v8192,.v16384{background:#3c3a32;color:#f9f6f2;font-size:30px}
+.overlay{position:absolute;inset:0;z-index:20;display:none;align-items:center;justify-content:center;background:rgba(238,228,218,.76);border-radius:var(--radius)}
+.overlay.show{display:flex}.overlay-card{text-align:center;padding:24px}
+.overlay-card h2{margin:0 0 10px;font-size:54px}.overlay-card p{margin:0 0 16px;font-size:17px;font-weight:700}
+.overlay-card button{background:var(--button);color:white;border-radius:4px;padding:10px 16px;margin:4px;font-weight:700}
+.overlay-card button.secondary{background:#aaa}
+.stats{max-width:500px;margin:16px auto 0;display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.stat{background:rgba(143,122,102,.11);border-radius:5px;padding:8px;text-align:center}
+.stat b{display:block;font-size:15px}.stat span{font-size:10px;text-transform:uppercase}
+.instructions{max-width:500px;margin:35px auto 0;font-size:15px;line-height:1.55}
+.instructions p{margin:0 0 13px}.kbd{display:inline-block;padding:1px 6px;border:1px solid #c6b8ac;border-radius:4px;background:#fff;font-size:12px}
+.footer{max-width:500px;margin:24px auto 0;font-size:12px;text-align:center}
+.modal{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.42);padding:15px}
+.modal.show{display:flex}.modal-card{width:min(100%,540px);max-height:90vh;overflow:auto;background:var(--panel);border-radius:10px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-card h2{margin:0 0 15px}.modal-card p{color:#777}
+.field{display:flex;gap:8px;margin:12px 0}.field input{flex:1;min-width:0;border:1px solid #cdbfb4;border-radius:5px;padding:10px 11px;outline:none}
+.field input:focus{border-color:var(--button)}.modal-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:16px;flex-wrap:wrap}
+.leaderboard{width:100%;border-collapse:collapse}.leaderboard th,.leaderboard td{padding:9px 7px;border-bottom:1px solid #eee;text-align:left}.leaderboard th{font-size:11px;text-transform:uppercase;color:#8f7a66}
+.rank{font-weight:800;width:42px}.empty-row{text-align:center!important;color:#999;padding:18px!important}
+.close{float:right;background:#eee;border-radius:50%;width:32px;height:32px;font-weight:800}
+.name-list{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}.name-chip{border:1px solid #ddd;background:#fafafa;padding:6px 9px;border-radius:20px;cursor:pointer}.name-chip:hover{background:#eee}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(20px);background:#333;color:#fff;padding:10px 15px;border-radius:6px;opacity:0;pointer-events:none;transition:.2s;z-index:200;font-size:13px}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.paused .tile-layer{filter:blur(8px)}
+@media(max-width:650px){
+  body{padding:18px 10px 35px}.topbar{gap:10px;margin-bottom:20px}.brand h1{font-size:56px}
+  .brand-copy{font-size:13px;margin-top:16px}.right-head{gap:10px}.score-box{min-width:61px;height:48px;padding:5px 7px}.score-box .label{font-size:8px}.score-box .value{font-size:14px}
+  .action{padding:8px 10px;font-size:13px}.player-name{max-width:110px}.tile{font-size:34px}.v128,.v256,.v512{font-size:28px}.v1024,.v2048{font-size:22px}
+}
+@media(max-width:430px){
+  .brand-copy{display:none}.brand h1{font-size:48px}.topbar{align-items:flex-start}.right-head{gap:7px}.scores{gap:3px}.actions{max-width:210px}
+  .stats{grid-template-columns:repeat(2,1fr)}.instructions{font-size:14px}.tile{font-size:28px}.v128,.v256,.v512{font-size:23px}.v1024,.v2048,.v4096,.v8192,.v16384{font-size:18px}
+}
+</style>
 </head>
 <body>
-    <div class="game-container">
-        <p class="score">Score: <span id="score">0</span></p>
-        <div class="grid-container"></div>
-        <button id="restart-btn">Restart</button>
-        <div class="top-scores">
-            <span>Top Scores</span>
-            <ul id="top-scores"></ul>
-        </div>
+<main class="page">
+<header class="topbar">
+  <section class="brand">
+    <h1>2048</h1>
+    <div class="brand-copy"><strong>Play 2048 Game Online</strong>Join the numbers and get to the 2048 tile!</div>
+  </section>
+  <section class="right-head">
+    <div class="player-strip">
+      <span>Player: <span class="player-name" id="playerName">Guest</span></span>
+      <button class="link-btn" id="changePlayer">Change</button>
     </div>
-    <script src="script.js?v=1"></script>
+    <div class="scores">
+      <div class="score-box"><span class="label">Score</span><span class="value" id="score">0</span></div>
+      <div class="score-box"><span class="label">Best</span><span class="value" id="best">0</span></div>
+    </div>
+    <div class="actions">
+      <button class="action secondary" id="undoBtn">Undo</button>
+      <button class="action secondary" id="pauseBtn">Pause</button>
+      <button class="action" id="newGame">New Game</button>
+    </div>
+  </section>
+</header>
+
+<section class="game-wrap">
+  <div class="board" id="board" aria-label="2048 game board">
+    <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+    <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+    <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+    <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+    <div class="tile-layer" id="tileLayer"></div>
+  </div>
+  <div class="overlay" id="overlay">
+    <div class="overlay-card">
+      <h2 id="overlayTitle">Game over!</h2>
+      <p id="overlayMessage">No more moves.</p>
+      <button id="tryAgain">Try again</button>
+      <button id="keepPlaying" style="display:none">Keep playing</button>
+    </div>
+  </div>
+</section>
+
+<section class="stats">
+  <div class="stat"><b id="moves">0</b><span>Moves</span></div>
+  <div class="stat"><b id="maxTile">0</b><span>Highest tile</span></div>
+  <div class="stat"><b id="merges">0</b><span>Merges</span></div>
+  <div class="stat"><b id="elapsed">0:00</b><span>Time</span></div>
+</section>
+
+<section class="instructions">
+  <p><strong>How to play:</strong> Use <span class="kbd">Arrow Keys</span> or <span class="kbd">W A S D</span>. On mobile, swipe the board. Equal tiles merge and their values are added to your score.</p>
+  <p><strong>Shortcuts:</strong> <span class="kbd">U</span> Undo &nbsp; <span class="kbd">P</span> Pause &nbsp; <span class="kbd">N</span> New game.</p>
+  <p style="display:none;">Your current game, player name, best score and leaderboard are automatically stored in this browser's local storage.</p>
+</section>
+<div class="footer">2048 — classic number puzzle with local player profiles, saved games and a top-five leaderboard.</div>
+</main>
+
+<div class="modal" id="playerModal">
+  <div class="modal-card">
+    <button class="close" id="closePlayer">×</button>
+    <h2>Who is playing?</h2>
+    <p>Enter your name. Your score will be recorded under this name when a game ends or you start another game.</p>
+    <div class="field"><input id="playerInput" maxlength="24" autocomplete="name" placeholder="Your name"><button class="action" id="savePlayer">Save</button></div>
+    <div><strong>Recent players</strong><div class="name-list" id="nameList"></div></div>
+  </div>
+</div>
+
+<div class="modal" id="leaderModal">
+  <div class="modal-card">
+    <button class="close" id="closeLeader">×</button>
+    <h2>🏆 Top Five Scores</h2>
+    <table class="leaderboard">
+      <thead><tr><th>#</th><th>Player</th><th>Score</th><th>Tile</th><th>Moves</th></tr></thead>
+      <tbody id="leaderBody"></tbody>
+    </table>
+    <div class="modal-actions">
+      <button class="action secondary" id="clearScores">Clear leaderboard</button>
+      <button class="action" id="closeLeader2">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+"use strict";
+
+/* The storage helpers supplied with the base project. */
+const get = (k, d) => JSON.parse(localStorage.getItem(`2048-${k}`)) ?? d;
+const set = (k, v) => localStorage.setItem(`2048-${k}`, JSON.stringify(v));
+const remove = k => localStorage.removeItem(`2048-${k}`);
+
+const SIZE = 4, WIN_VALUE = 2048;
+const boardEl = document.getElementById("board"), tileLayer = document.getElementById("tileLayer");
+const scoreEl = document.getElementById("score"), bestEl = document.getElementById("best");
+const playerNameEl = document.getElementById("playerName"), movesEl = document.getElementById("moves");
+const maxTileEl = document.getElementById("maxTile"), mergesEl = document.getElementById("merges"), elapsedEl = document.getElementById("elapsed");
+const overlay = document.getElementById("overlay"), overlayTitle = document.getElementById("overlayTitle"), overlayMessage = document.getElementById("overlayMessage");
+const tryAgainBtn = document.getElementById("tryAgain"), keepPlayingBtn = document.getElementById("keepPlaying");
+const playerModal = document.getElementById("playerModal"), playerInput = document.getElementById("playerInput"), nameList = document.getElementById("nameList");
+const leaderModal = document.getElementById("leaderModal"), leaderBody = document.getElementById("leaderBody"), toastEl = document.getElementById("toast");
+
+let grid, score=0, best=Number(get("best",0)), playerName=get("player","Guest") || "Guest";
+let won=false, gameOver=false, keepPlaying=false, paused=false, moves=0, merges=0, startedAt=Date.now(), elapsedBefore=0;
+let history=[], touchStartX=0, touchStartY=0, toastTimer=null;
+
+const emptyGrid = () => Array.from({length:SIZE},()=>Array(SIZE).fill(0));
+const cloneGrid = g => g.map(r=>r.slice());
+const maxTile = () => Math.max(0,...grid.flat());
+
+function normalizeLeaderboard(list){
+  if(!Array.isArray(list)) return [];
+  return list.filter(x=>x && typeof x.name==="string" && Number.isFinite(Number(x.score)))
+    .map(x=>({name:x.name.slice(0,24)||"Guest",score:Number(x.score),tile:Number(x.tile)||0,moves:Number(x.moves)||0,date:x.date||Date.now()}))
+    .sort((a,b)=>b.score-a.score || b.tile-a.tile || b.moves-a.moves)
+    .slice(0,5);
+}
+function leaderboard(){ return normalizeLeaderboard(get("leaderboard",[])); }
+function saveLeaderboardEntry(){
+  const entry={name:playerName,score,tile:maxTile(),moves,date:Date.now()};
+  const list=normalizeLeaderboard([...leaderboard(),entry]);
+  set("leaderboard",list);
+}
+function updateBest(){
+  if(score>best){best=score;set("best",best);}
+}
+function startGame(recordPrevious=false){
+  if(recordPrevious && score>0) saveLeaderboardEntry();
+  grid=emptyGrid(); score=0; moves=0; merges=0; won=false; gameOver=false; keepPlaying=false; paused=false;
+  history=[]; elapsedBefore=0; startedAt=Date.now();
+  hideOverlay(); boardEl.classList.remove("paused");
+  addRandomTile(); addRandomTile(); update(); saveGame(); updatePauseButton();
+}
+function addRandomTile(){
+  const empty=[];
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)if(!grid[r][c])empty.push([r,c]);
+  if(!empty.length)return false;
+  const [r,c]=empty[Math.floor(Math.random()*empty.length)];
+  grid[r][c]=Math.random()<.9?2:4; return true;
+}
+function slideLine(line){
+  const values=line.filter(Boolean), result=[]; let gained=0, didMerge=0;
+  for(let i=0;i<values.length;i++){
+    if(values[i]===values[i+1]){const merged=values[i]*2;result.push(merged);gained+=merged;didMerge++;i++}
+    else result.push(values[i]);
+  }
+  while(result.length<SIZE)result.push(0);
+  return {line:result,gained,didMerge};
+}
+function gridsEqual(a,b){return JSON.stringify(a)===JSON.stringify(b)}
+function snapshot(){return {grid:cloneGrid(grid),score,moves,merges,won,gameOver,keepPlaying,elapsed:getElapsedSeconds()}}
+
+function move(direction){
+  if(paused || gameOver || (won&&!keepPlaying))return;
+  const before=cloneGrid(grid), oldScore=score, oldMoves=moves, oldMerges=merges;
+  let gained=0, didMerge=0;
+  if(direction==="left"||direction==="right"){
+    for(let r=0;r<SIZE;r++){
+      let line=grid[r].slice(); if(direction==="right")line.reverse();
+      const p=slideLine(line); gained+=p.gained; didMerge+=p.didMerge;
+      if(direction==="right")p.line.reverse(); grid[r]=p.line;
+    }
+  }else{
+    for(let c=0;c<SIZE;c++){
+      let line=[];for(let r=0;r<SIZE;r++)line.push(grid[r][c]);if(direction==="down")line.reverse();
+      const p=slideLine(line);gained+=p.gained;didMerge+=p.didMerge;
+      if(direction==="down")p.line.reverse();for(let r=0;r<SIZE;r++)grid[r][c]=p.line[r];
+    }
+  }
+  if(gridsEqual(before,grid))return;
+  history.push({grid:before,score:oldScore,moves:oldMoves,merges:oldMerges,won,gameOver,keepPlaying,elapsed:getElapsedSeconds()});
+  if(history.length>100)history.shift();
+  score+=gained;moves++;merges+=didMerge;updateBest();addRandomTile();update();saveGame();
+  if(!won&&hasWon()){won=true;saveGame();showWin()}
+  else if(!canMove()){gameOver=true;saveLeaderboardEntry();clearSavedGame();showGameOver()}
+}
+function undo(){
+  if(paused||!history.length||gameOver)return;
+  const h=history.pop();grid=cloneGrid(h.grid);score=h.score;moves=h.moves;merges=h.merges;won=h.won;gameOver=h.gameOver;keepPlaying=h.keepPlaying;
+  elapsedBefore=h.elapsed;startedAt=Date.now();hideOverlay();update();saveGame();toast("Move undone");
+}
+function hasWon(){return grid.some(row=>row.some(v=>v>=WIN_VALUE))}
+function canMove(){
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    if(grid[r][c]===0)return true;
+    if(c<SIZE-1&&grid[r][c]===grid[r][c+1])return true;
+    if(r<SIZE-1&&grid[r][c]===grid[r+1][c])return true;
+  }
+  return false;
+}
+function getElapsedSeconds(){return elapsedBefore+(paused?0:Math.max(0,Math.floor((Date.now()-startedAt)/1000)))}
+function formatTime(s){const m=Math.floor(s/60),sec=s%60;return `${m}:${String(sec).padStart(2,"0")}`}
+function update(){
+  scoreEl.textContent=score;bestEl.textContent=best;playerNameEl.textContent=playerName;
+  movesEl.textContent=moves;maxTileEl.textContent=maxTile();mergesEl.textContent=merges;elapsedEl.textContent=formatTime(getElapsedSeconds());
+  renderTiles();updatePauseButton();
+}
+function renderTiles(){
+  tileLayer.innerHTML="";
+  const rect=tileLayer.getBoundingClientRect();
+  const gap=parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--gap"))||15;
+  const cell=(rect.width-gap*3)/4;
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    const value=grid[r][c];if(!value)continue;
+    const tile=document.createElement("div");
+    tile.className="tile v"+value;tile.textContent=value;
+    tile.style.left=`${c*(cell+gap)}px`;tile.style.top=`${r*(cell+gap)}px`;
+    tileLayer.appendChild(tile);
+  }
+}
+function showOverlay(title,message,win=false){
+  overlayTitle.textContent=title;overlayMessage.textContent=message;
+  keepPlayingBtn.style.display=win?"inline-block":"none";overlay.classList.add("show");
+}
+function hideOverlay(){overlay.classList.remove("show")}
+function showWin(){showOverlay("You win!","You reached the 2048 tile. Keep playing for a higher score!",true)}
+function showGameOver(){showOverlay("Game over!","No more moves. Your score has been saved to the leaderboard.")}
+function pause(){
+  if(gameOver)return;
+  if(!paused){elapsedBefore=getElapsedSeconds();paused=true;boardEl.classList.add("paused");showOverlay("Paused","Take a break. Your game is safely saved.");}
+  else{paused=false;startedAt=Date.now();hideOverlay();boardEl.classList.remove("paused");}
+  saveGame();updatePauseButton();update();
+}
+function updatePauseButton(){document.getElementById("pauseBtn").textContent=paused?"Resume":"Pause"}
+
+function saveGame(){
+  if(!grid)return;
+  set("currentGame",{grid,score,best,moves,merges,won,gameOver,keepPlaying,playerName,elapsed:getElapsedSeconds()});
+}
+function clearSavedGame(){remove("currentGame")}
+function loadSavedGame(){
+  const s=get("currentGame",null);
+  if(!s||!Array.isArray(s.grid))return false;
+  grid=s.grid;score=Number(s.score)||0;moves=Number(s.moves)||0;merges=Number(s.merges)||0;won=!!s.won;gameOver=!!s.gameOver;keepPlaying=!!s.keepPlaying;
+  playerName=s.playerName||playerName;elapsedBefore=Number(s.elapsed)||0;startedAt=Date.now();paused=false;history=[];
+  if(gameOver){clearSavedGame();return false}
+  update();return true;
+}
+
+function openPlayer(){
+  playerInput.value=playerName==="Guest"?"":playerName;
+  renderNameList();playerModal.classList.add("show");setTimeout(()=>playerInput.focus(),50);
+}
+function closePlayerModal(){playerModal.classList.remove("show")}
+function savePlayer(){
+  const name=playerInput.value.trim().replace(/\s+/g," ").slice(0,24)||"Guest";
+  playerName=name;set("player",name);
+  let names=get("players",[]);if(!Array.isArray(names))names=[];names=[name,...names.filter(n=>n!==name)].slice(0,10);set("players",names);
+  update();saveGame();closePlayerModal();toast(`Playing as ${name}`);
+}
+function renderNameList(){
+  const names=get("players",[]);nameList.innerHTML="";
+  (Array.isArray(names)?names:[]).forEach(name=>{
+    const b=document.createElement("button");b.className="name-chip";b.textContent=name;b.onclick=()=>{playerInput.value=name};nameList.appendChild(b);
+  });
+}
+function openLeaderboard(){
+  const list=leaderboard();leaderBody.innerHTML="";
+  if(!list.length){leaderBody.innerHTML='<tr><td colspan="5" class="empty-row">No completed scores yet.</td></tr>'}
+  else list.forEach((x,i)=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td class="rank">${i+1}</td><td>${escapeHtml(x.name)}</td><td>${x.score.toLocaleString()}</td><td>${x.tile.toLocaleString()}</td><td>${x.moves}</td>`;
+    leaderBody.appendChild(tr);
+  });
+  leaderModal.classList.add("show");
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+function toast(message){
+  toastEl.textContent=message;toastEl.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.classList.remove("show"),1800);
+}
+
+function handleKey(e){
+  if(playerModal.classList.contains("show")||leaderModal.classList.contains("show")){
+    if(e.key==="Escape"){closePlayerModal();leaderModal.classList.remove("show")}return;
+  }
+  const key=e.key;
+  const keys={ArrowLeft:"left",a:"left",A:"left",ArrowRight:"right",d:"right",D:"right",ArrowUp:"up",w:"up",W:"up",ArrowDown:"down",s:"down",S:"down"};
+  if(keys[key]){e.preventDefault();move(keys[key]);return}
+  if(key==="u"||key==="U"){e.preventDefault();undo();return}
+  if(key==="p"||key==="P"){e.preventDefault();pause();return}
+  if(key==="n"||key==="N"){e.preventDefault();newGameConfirm();return}
+}
+function newGameConfirm(){
+  if(score>0&&!gameOver&&!confirm("Start a new game? Your current score will be recorded on the top-five leaderboard if it qualifies."))return;
+  startGame(true);
+}
+function touchStart(e){if(e.touches?.length){touchStartX=e.touches[0].clientX;touchStartY=e.touches[0].clientY}}
+function touchEnd(e){
+  if(paused||gameOver)return;
+  if(!e.changedTouches?.length)return;
+  const dx=e.changedTouches[0].clientX-touchStartX,dy=e.changedTouches[0].clientY-touchStartY;
+  if(Math.max(Math.abs(dx),Math.abs(dy))<25)return;
+  move(Math.abs(dx)>Math.abs(dy)?(dx>0?"right":"left"):(dy>0?"down":"up"));
+}
+
+document.addEventListener("keydown",handleKey);
+boardEl.addEventListener("touchstart",touchStart,{passive:true});
+boardEl.addEventListener("touchend",touchEnd,{passive:true});
+window.addEventListener("resize",renderTiles);
+document.getElementById("newGame").onclick=newGameConfirm;
+document.getElementById("undoBtn").onclick=undo;
+document.getElementById("pauseBtn").onclick=pause;
+document.getElementById("changePlayer").onclick=openPlayer;
+document.getElementById("savePlayer").onclick=savePlayer;
+document.getElementById("closePlayer").onclick=closePlayerModal;
+playerInput.addEventListener("keydown",e=>{if(e.key==="Enter")savePlayer()});
+tryAgainBtn.onclick=()=>startGame(true);
+keepPlayingBtn.onclick=()=>{keepPlaying=true;hideOverlay();saveGame()};
+document.getElementById("clearScores").onclick=()=>{
+  if(confirm("Delete all five leaderboard scores? This cannot be undone.")){remove("leaderboard");openLeaderboard();toast("Leaderboard cleared")}
+};
+document.getElementById("closeLeader").onclick=()=>leaderModal.classList.remove("show");
+document.getElementById("closeLeader2").onclick=()=>leaderModal.classList.remove("show");
+leaderModal.addEventListener("click",e=>{if(e.target===leaderModal)leaderModal.classList.remove("show")});
+playerModal.addEventListener("click",e=>{if(e.target===playerModal)closePlayerModal()});
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&grid&&!paused&&!gameOver){elapsedBefore=getElapsedSeconds();paused=true;boardEl.classList.add("paused");saveGame();update()}});
+
+const leaderboardButton=document.createElement("button");
+leaderboardButton.className="link-btn";leaderboardButton.textContent="🏆 Top 5";leaderboardButton.onclick=openLeaderboard;
+document.querySelector(".player-strip").appendChild(leaderboardButton);
+
+setInterval(()=>{if(grid&&!paused&&!gameOver){elapsedEl.textContent=formatTime(getElapsedSeconds());saveGame()}},1000);
+
+bestEl.textContent=best;playerNameEl.textContent=playerName;
+if(!loadSavedGame()){startGame(false)}
+})();
+</script>
 </body>
 </html>
